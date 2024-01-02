@@ -19,7 +19,7 @@ import com.nokia.mj.impl.utils.Base64;
 public class RecordStore
 {
 	private static String separator = System.getProperty("file.separator");
-	private static Vector openRecordStores;
+	private static Vector openRecordStores = new Vector();
 
 	static {
 		try {
@@ -63,14 +63,17 @@ public class RecordStore
 			if(!file.exists()) throw new RecordStoreNotFoundException(name);
 			DataInputStream dataInputStream = file.openDataInputStream();
 			count = dataInputStream.readInt();
-			for (int j = dataInputStream.readInt(), i = 0; i < j; ++i) {
+			for (int len = dataInputStream.readInt(), i = 0; i < len; ++i) {
 				records.addElement(new Integer(dataInputStream.readInt()));
 			}
-			if(dataInputStream.available() > 0) {
-				lastModified = dataInputStream.readLong();
-				version = dataInputStream.readInt();
-				authmode = dataInputStream.readInt();
-				writable = dataInputStream.readBoolean();
+			try {
+				if(dataInputStream.available() > 0) {
+					lastModified = dataInputStream.readLong();
+					version = dataInputStream.readInt();
+					authmode = dataInputStream.readInt();
+					writable = dataInputStream.readBoolean();
+				}
+			} catch (IOException e) {
 			}
 			dataInputStream.close();
 			if(!homeSuite && authmode == AUTHMODE_PRIVATE) {
