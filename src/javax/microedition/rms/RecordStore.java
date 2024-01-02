@@ -2,6 +2,7 @@ package javax.microedition.rms;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Vector;
@@ -72,13 +73,11 @@ public class RecordStore
 				writable = dataInputStream.readBoolean();
 			}
 			dataInputStream.close();
-			if(!homeSuite &&  authmode == AUTHMODE_PRIVATE) {
+			if(!homeSuite && authmode == AUTHMODE_PRIVATE) {
 				throw new SecurityException();
 			}
 			openRecordStores.addElement(this);
-		} catch (RecordStoreNotFoundException e) {
-			throw e;
-		} catch (Exception e) {
+		} catch (IOException e) {
 			throw new RecordStoreNotFoundException(name);
 		}
 	}
@@ -86,6 +85,7 @@ public class RecordStore
 	public void setMode(int aAuthmode, boolean aWritable) throws RecordStoreException {
 		if(closed) throw new RecordStoreNotOpenException();
 		if(!homeSuite) throw new SecurityException("Only read operations allowed");
+		if(aAuthmode < 0 || aAuthmode > 1) throw new IllegalArgumentException("Access mode is invalid");
 		authmode = aAuthmode;
 		writable = aWritable;
 		writeIndex();
@@ -158,11 +158,16 @@ public class RecordStore
 		if(aName.length() > 32 || aName.length() < 1) throw new IllegalArgumentException("Record store name is invalid");
 		String rootPath = getRootPath() + encodeStoreName(aName) + separator;
 		RecordStore rs = findRecordStore(rootPath);
-		if(rs != null) return rs;
+		if(rs != null) {
+			rs.setMode(authmode, writable);
+			return rs;
+		}
 		FileUtility file = new FileUtility(rootPath);
 		boolean exists = file.exists() && file.isDirectory() && new FileUtility(rootPath + "idx").exists();
 		if (exists || createIfNecessary) {
-			return new RecordStore(aName, rootPath, true, exists);
+			rs = new RecordStore(aName, rootPath, true, exists);
+			rs.setMode(authmode, writable);
+			return rs;
 		}
 		throw new RecordStoreNotFoundException(aName);
 	}
