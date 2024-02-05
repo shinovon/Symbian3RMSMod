@@ -54,10 +54,17 @@ public class RecordStore
 			if (!existing) {
 				count = 1;
 				writeIndex();
+				openRecordStores.addElement(this);
 				return;
 			}
 			FileUtility file = new FileUtility(rootPath + "idx");
 			if(!file.exists()) throw new RecordStoreNotFoundException(name);
+			if(file.fileSize() == 0) {
+				count = 1;
+				writeIndex();
+				openRecordStores.addElement(this);
+				return;
+			}
 			DataInputStream dataInputStream = file.openDataInputStream();
 			count = dataInputStream.readInt();
 			for (int len = dataInputStream.readInt(), i = 0; i < len; ++i) {
@@ -204,6 +211,7 @@ public class RecordStore
 	}
 
 	public static String[] listRecordStores() {
+		// TODO: check if idx file exists
 		String[] list = null;
 		try {
 			FileUtility file = new FileUtility(getRootPath());
